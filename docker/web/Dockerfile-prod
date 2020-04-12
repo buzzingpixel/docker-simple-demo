@@ -1,0 +1,12 @@
+FROM nginx:1.17.5
+
+# Update bash profile
+COPY ./docker/.profile /root/.profile
+COPY ./docker/.profile /root/.bashrc
+
+# Copy application into contianer
+COPY . /opt/project
+
+# Copy prod configuration into container
+COPY ./docker/web/nginx-prod.conf /etc/nginx/conf.d/prod.conf
+COPY ./docker/web/dhparam.pem /etc/nginx/ssl/dhparam.pem

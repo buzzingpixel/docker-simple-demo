@@ -1,0 +1,50 @@
+# On macOS and Windows, a major cause of slow performance is file system IO.
+# The biggest way around this is to put anything you don't need to have
+# "instant" updates on file save for into a synced volume. The sync happens in
+# the background so it doesn't affect file IO performance on page load. For most
+# PHP applications, composer's vendor directory is a huge win.
+
+# Specify the compose file api version
+version: '3.7'
+
+services:
+  # Additional config for web
+  web:
+    # We're telling Docker to start this container after the
+    # bg-sync-vendor container
+    depends_on:
+      - bg-sync-vendor
+    # Here we mount the vendor volume over the file system mount so that the
+    # vendor volume with much better performance takes precedence
+    volumes:
+      - vendor-volume:/opt/project/vendor
+
+  # Additional config for web
+  php:
+    # We're telling Docker to start this container after the
+    # bg-sync-vendor container
+    depends_on:
+      - bg-sync-vendor
+    # Here we mount the vendor volume over the file system mount so that the
+    # vendor volume with much better performance takes precedence
+    volumes:
+      - vendor-volume:/opt/project/vendor
+
+  # The vendor background sync service
+  bg-sync-vendor:
+    # We're using a premade image that will do the syncing for us
+    image: cweagans/bg-sync
+    volumes:
+      # In the container's /source directory, we're mounting our localhost's
+      # vendor directory as the source of truth
+      - ./vendor:/source
+      # And in the container's /destination directory, we're mounting the volume
+      - vendor-volume:/destination
+    environment:
+      - SYNC_MAX_INOTIFY_WATCHES=40000
+      - SYNC_VERBOSE=1
+    privileged: true
+
+# Additional volumes
+volumes:
+  vendor-volume:

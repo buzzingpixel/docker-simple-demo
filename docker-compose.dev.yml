@@ -1,0 +1,38 @@
+# This compose file is combined with the base compose file for dev. When
+# specified after the base file, it adds to or overrides any values in the base
+# compose file
+
+# Specify the compose file api version
+version: '3.7'
+
+services:
+  # Additional dev configuration for the web container
+  web:
+    # Map additional volumes
+    volumes:
+      # Project root directory (.) mounted to /opt/project inside the container
+      - .:/opt/project:delegated
+
+  # Additional dev configuration for the php container
+  web:
+    # Map additional volumes
+    volumes:
+      # Project root directory (.) mounted to /opt/project inside the container
+      - .:/opt/project:delegated
+      # Xdebug config for dev. Default to the linux file because dev on linux
+      # requires slightly different config for xdebug than macOS or Windows
+      - ./docker/php/xdebug-linux.ini:/usr/local/etc/php/conf.d/xdebug.ini
+
+  # Additional dev configuration for the db container
+  db:
+    # Using environment variables, create database and set username and password
+    # from the .env file. So we don't have to have duplicate data for multiple
+    # keys in the .env file
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    # Map additional volumes
+    volumes:
+      # Project root directory (.) mounted to /opt/project inside the container
+      - .:/opt/project:delegated

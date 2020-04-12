@@ -1,0 +1,82 @@
+# This compose file is combined with the base compose file for production. When
+# specified after the base file, it adds to or overrides any values in the base
+# compose file
+
+# Specify the compose file api version
+version: '3.7'
+
+services:
+  # Add an additional container for utility in prod
+  utility:
+    # Set environment variables in the container from the .env file
+    env_file: .env
+    # Specify the image to use
+    image: ubuntu:18.04
+    # If the server is restarted or the docker daemon is restarted, we want
+    # production containers to always come back online
+    restart: always
+    # Give the container a friendly name that you can see when you run docker ps
+    container_name: demo-utility
+    # Map volumes
+    volumes:
+      - log-volume:/log-volume
+      - cache-volume:/cache-volume
+      - uploads-volume:/uploads-volume
+    command: bash -c "chmod +x /opt/project/docker/utility/prod.sh && /opt/project/docker/utility/prod.sh"
+
+  # Additional production configuration for the web container
+  web:
+    # We want to use a different dockerfile for prod. It will be mostly the same
+    # but we're going to build in prod configs instead of dev configs and we'll
+    # also build the entire app into the container instead of mounting the app
+    # from the host for performance reasons
+    build:
+      context: ./
+      dockerfile: ./docker/web/Dockerfile-prod
+    # If the server is restarted or the docker daemon is restarted, we want
+    # production containers to always come back online
+    restart: always
+    # Map some additional volumes
+    volumes:
+      # We need non-ephemeral storage for logs
+      - log-volume:/var/log
+      # Anything that your application creates in prod like user uploads needs
+      # to be stored in a volume so it doesn't dissapear when the container
+      # goes down
+      - uploads-volume:/opt/project/public/uploads
+
+  # Additional production configuration for the php container
+  php:
+    # We want to use a different dockerfile for prod. It will be mostly the same
+    # but we're going to build in prod configs instead of dev configs and we'll
+    # also build the entire app into the container instead of mounting the app
+    # from the host for performance reasons
+    build:
+      context: ./
+      dockerfile: ./docker/php/Dockerfile-prod
+    # If the server is restarted or the docker daemon is restarted, we want
+    # production containers to always come back online
+    restart: always
+    # Map some additional volumes
+    volumes:
+      # We need non-ephemeral storage for logs
+      - log-volume:/var/log
+      # Anything that your application creates in prod like user uploads needs
+      # to be stored in a volume so it doesn't dissapear when the container
+      # goes down
+      - uploads-volume:/opt/project/public/uploads
+
+  # Additional production configuration for the db container
+  db:
+    # If the server is restarted or the docker daemon is restarted, we want
+    # production containers to always come back online
+    restart: always
+    # Map some additional volumes
+    volumes:
+      # We need non-ephemeral storage for logs
+      - log-volume:/var/log
+
+# Add our additional production volumes for non-ephemeral storage
+volumes:
+  log-volume:
+  uploads-volume:

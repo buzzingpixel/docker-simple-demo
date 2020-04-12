@@ -1,0 +1,119 @@
+# Base docker file used by all environments
+
+# Specify the compose file api version
+version: '3.7'
+
+# All containers are defined in "services"
+services:
+  # Container for web server
+  web:
+    # Set environment variables in the container from the .env file
+    env_file: .env
+    # Build a custom image from a Dockerfile
+    build:
+      context: ./
+      dockerfile: ./docker/web/Dockerfile
+    # If you don't want to build a custom image, you can specify an image here
+    ## image: nginx:1.17.9
+    # Give the container a friendly name that you can see when you run docker ps
+    container_name: demo-web
+    # Map ports from localhost to the container
+    ports:
+      - 6035:6035
+    # Set a specific environment variable of HOSTNAME so we can identify what
+    # container CLI we're in
+    environment:
+      HOSTNAME: demo-web
+    # Map volumes
+    volumes:
+      # Mount a volume to the cache directory for non-ephemeral storage
+      - cache-volume:/opt/project/cache
+    # Connect this container to a network with aliases.
+    # The .me alias is for local dev. localtest.me points to 172.0.0.1
+    # The .com addresses are for prod deployments so that a nginx proxy
+    # can get access
+    networks:
+      default:
+        aliases:
+          - demo.localtest.me
+          - demo.com
+          - www.demo.com
+
+  # Container for php-fpm
+  php:
+    # Set environment variables in the container from the .env file
+    env_file: .env
+    # Build a custom image from a Dockerfile
+    build:
+      context: ./
+      dockerfile: ./docker/php/Dockerfile
+    # If you don't want to build a custom image, you can specify an image here
+    ## image: php:7.4.4-fpm
+    # Give the container a friendly name that you can see when you run docker ps
+    container_name: demo-php
+    # Set a specific environment variable of HOSTNAME so we can identify what
+    # container CLI we're in
+    environment:
+      HOSTNAME: demo-php
+    # Map volumes
+    volumes:
+      # This directory (.) mounted to /opt/project inside the container
+      - .:/opt/project:delegated
+      # Mount a volume to the cache directory for non-ephemeral storage
+      - cache-volume:/opt/project/cache
+    # Connect this container to a network with aliases. The alias allows the
+    # nginx container to send PHP requests to FPM
+    networks:
+      default:
+        aliases:
+          - demo-php
+
+  # Container for database
+  db:
+    # Set environment variables in the container from the .env file
+    env_file: .env
+    # Build a custom image from a Dockerfile
+    build:
+      context: ./
+      dockerfile: ./docker/db/Dockerfile
+    # If you don't want to build a custom image, you can specify an image here
+    ## image: percona:ps-8.0.19-10
+    # Give the container a friendly name that you can see when you run docker ps
+    container_name: demo-db
+    # Set a specific environment variable of HOSTNAME so we can identify what
+    # container CLI we're in. Additionally don't allow empy mysql passwords
+    # and set the root passwrod from the environment file on first run
+    environment:
+      HOSTNAME: demo-db
+      MYSQL_ALLOW_EMPTY_PASSWORD: "no"
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    # Map volumes
+    volumes:
+      # Mount a volume to the mysql data directory for non-ephemeral storage
+      - db-volume:/var/lib/mysql
+    # Map ports from localhost to the container so database tools can get
+    # to the container
+    ports:
+      - 6036:3306
+    # Connect this container to a network with aliases. The alias allows the
+    # other containers to connect to the database
+    networks:
+      default:
+        aliases:
+          - demo-db
+
+# Setup volumes for non-ephemeral storage
+volumes:
+  cache-volume:
+  db-volume:
+
+# Connect to an external proxy network as the default network. Having the
+# network be external allows containers not defined in this compose file to
+# access the containers that _are_ defined in this compose file. This is
+# important particularly if you ever want to run more than one site/nginx
+# docker instance on one system. Then you can use an nginx reverse proxy to
+# map into those containers from the outside.
+networks:
+  default:
+    external:
+      name: proxy
