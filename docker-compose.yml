@@ -57,8 +57,6 @@ services:
       HOSTNAME: demo-php
     # Map volumes
     volumes:
-      # This directory (.) mounted to /opt/project inside the container
-      - .:/opt/project:delegated
       # Mount a volume to the cache directory for non-ephemeral storage
       - cache-volume:/opt/project/cache
     # Connect this container to a network with aliases. The alias allows the

@@ -14,7 +14,7 @@ services:
       - .:/opt/project:delegated
 
   # Additional dev configuration for the php container
-  web:
+  php:
     # Map additional volumes
     volumes:
       # Project root directory (.) mounted to /opt/project inside the container
